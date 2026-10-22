@@ -1,0 +1,25 @@
+# Environment secrets
+.env
+.env.*
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.venv/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded documents
+uploads/
+
+# Test cache
+.pytest_cache/
+
+# IDE settings
+.vscode/

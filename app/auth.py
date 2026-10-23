@@ -1,4 +1,4 @@
-from django.db import connection
+from app.database import get_connection
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os

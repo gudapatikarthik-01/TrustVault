@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustVault | Secure Document Sharing</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #17233c;
+        }
+        header {
+            background: #101b36;
+            color: white;
+            padding: 22px 8%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h2 { margin: 0; }
+        header span { color: #64e0c0; }
+        .hero {
+            padding: 85px 8%;
+            background: linear-gradient(120deg, #101b36, #254b83);
+            color: white;
+            text-align: center;
+        }
+        .hero h1 { font-size: clamp(34px, 5vw, 56px); margin: 0 0 20px; }
+        .hero p {
+            max-width: 650px;
+            margin: 0 auto 30px;
+            line-height: 1.8;
+            color: #dce7fa;
+        }
+        .button {
+            display: inline-block;
+            background: #64e0c0;
+            color: #10203b;
+            text-decoration: none;
+            padding: 14px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .section { padding: 55px 8%; text-align: center; }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 22px;
+            margin-top: 30px;
+        }
+        .card {
+            background: white;
+            padding: 28px;
+            border-radius: 14px;
+            box-shadow: 0 5px 20px #17233c10;
+        }
+        .icon { font-size: 34px; }
+        .card h3 { margin-bottom: 10px; }
+        .card p { color: #64718a; line-height: 1.7; }
+        footer {
+            text-align: center;
+            padding: 24px;
+            background: #101b36;
+            color: #dce7fa;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h2>🔐 Trust<span>Vault</span></h2>
+        <a class="button" href="/docs">Open API Docs</a>
+    </header>
+
+    <section class="hero">
+        <h1>Your Documents. Your Control.</h1>
+        <p>A secure document-sharing platform built to protect sensitive files,
+        control user permissions, and maintain a transparent audit trail.</p>
+        <a class="button" href="/docs">Explore TrustVault →</a>
+    </section>
+
+    <section class="section">
+        <h2>Security You Can Trust</h2>
+        <p>Designed for secure access, accountability, and document protection.</p>
+        <div class="cards">
+            <div class="card">
+                <div class="icon">🔒</div>
+                <h3>Secure Access</h3>
+                <p>Authentication helps protect documents from unauthorized users.</p>
+            </div>
+            <div class="card">
+                <div class="icon">👥</div>
+                <h3>Role-Based Permissions</h3>
+                <p>Manage access for admins, owners, and viewers.</p>
+            </div>
+            <div class="card">
+                <div class="icon">📋</div>
+                <h3>Audit Trail</h3>
+                <p>Record important actions to support accountability and traceability.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>TrustVault — Secure Document Sharing with a Real Audit Trail</footer>
+</body>
+</html>

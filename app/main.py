@@ -2,6 +2,7 @@ import os
 import hashlib
 import sqlite3
 from pathlib import Path
+from fastapi.responses import FileResponse
 from datetime import datetime, timezone
 
 from fastapi import (
@@ -167,11 +168,8 @@ def safe_file_path(filename):
 
 @app.get("/")
 def home():
-    return {
-        "message": "Welcome to TrustVault",
-        "status": "running",
-        "documentation": "/docs",
-    }
+    index_file = Path(__file__).resolve().parent.parent / "static" / "index.html"
+    return FileResponse(index_file)
 
 
 # --------------------------------------------------

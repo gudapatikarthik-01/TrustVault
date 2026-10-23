@@ -1,14 +1,21 @@
 import sqlite3
 import hashlib
 import json
-from datetime import date, datetime
+import os
 from pathlib import Path
+from datetime import datetime, timezone
 
 # Database file location
-DATABASE_PATH = Path(__file__).resolve().parent.parent / "trustvault.db"
+DATABASE_PATH = Path(
+    os.getenv(
+        "DATABASE_PATH",
+        str(Path(__file__).resolve().parent.parent / "trustvault.db"),
+    )
+)
 
 
 def get_connection():
+    """Create and return a database connection."""
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
@@ -16,21 +23,23 @@ def get_connection():
 
 
 def create_tables():
+    """Create the required database tables."""
     connection = get_connection()
+
     try:
         cursor = connection.cursor()
-        cursor.execute(
-            """
+
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                role TEXT NOT NULL CHECK (role IN ('admin', 'owner', 'viewer'))
+                role TEXT NOT NULL
+                    CHECK (role IN ('admin', 'owner', 'viewer'))
             )
-            """
-        )
-        cursor.execute(
-            """
+        """)
+
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS documents (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 filename TEXT NOT NULL,
@@ -39,36 +48,40 @@ def create_tables():
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )
-            """
-        )
-        cursor.execute(
-            """
+        """)
+
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS permissions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 document_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
-                permission TEXT NOT NULL CHECK (permission IN ('read', 'edit')),
+                permission TEXT NOT NULL
+                    CHECK (permission IN ('read', 'edit')),
                 UNIQUE (document_id, user_id),
-                FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (document_id)
+                    REFERENCES documents(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id) ON DELETE CASCADE
             )
-            """
-        )
+        """)
+
         cursor.execute("""
-    CREATE TABLE IF NOT EXISTS audit_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        action TEXT NOT NULL,
-        document_id INTEGER,
-        details TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        previous_hash TEXT,
-        entry_hash TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-        FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                action TEXT NOT NULL,
+                document_id INTEGER,
+                details TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                previous_hash TEXT,
+                entry_hash TEXT,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (document_id)
+                    REFERENCES documents(id) ON DELETE SET NULL
             )
-            """
-        )
+        """)
+
         columns = {
             row["name"]
             for row in connection.execute(
@@ -85,32 +98,36 @@ def create_tables():
             connection.execute(
                 "ALTER TABLE audit_logs ADD COLUMN entry_hash TEXT"
             )
+
         connection.commit()
+
     except Exception:
         connection.rollback()
         raise
+
     finally:
         connection.close()
 
 
 def log_action(user_id, action, document_id=None, details=None):
+    """Record an action with a hash linked to the previous audit entry."""
     connection = get_connection()
 
     try:
-        previous = connection.execute(
-            """
+        previous = connection.execute("""
             SELECT entry_hash
             FROM audit_logs
             ORDER BY id DESC
             LIMIT 1
-            """
-        ).fetchone()
+        """).fetchone()
 
-        previous_hash = previous["entry_hash"] if previous else "GENESIS"
+        previous_hash = (
+            previous["entry_hash"]
+            if previous and previous["entry_hash"]
+            else "GENESIS"
+        )
 
-        created_at = __import__("datetime").datetime.now(
-            __import__("datetime").timezone.utc
-        ).isoformat()
+        created_at = datetime.now(timezone.utc).isoformat()
 
         entry_data = {
             "user_id": user_id,
@@ -129,24 +146,21 @@ def log_action(user_id, action, document_id=None, details=None):
             ).encode("utf-8")
         ).hexdigest()
 
-        connection.execute(
-            """
+        connection.execute("""
             INSERT INTO audit_logs (
                 user_id, action, document_id, details,
                 created_at, previous_hash, entry_hash
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                user_id,
-                action,
-                document_id,
-                details,
-                created_at,
-                previous_hash,
-                entry_hash,
-            ),
-        )
+        """, (
+            user_id,
+            action,
+            document_id,
+            details,
+            created_at,
+            previous_hash,
+            entry_hash,
+        ))
 
         connection.commit()
 
@@ -156,71 +170,68 @@ def log_action(user_id, action, document_id=None, details=None):
 
     finally:
         connection.close()
-    
+
+
 def initialize_audit_hashes():
-    """Rebuild hashes only when explicitly called."""
-connection = get_connection()
-
-try:
-    rows = connection.execute(
-        """
-        SELECT id, user_id, action, document_id, details, created_at
-        FROM audit_logs
-        ORDER BY id ASC
-        """
-    ).fetchall()
-
-    previous_hash = "GENESIS"
-
-    for row in rows:
-        entry_data = {
-            "user_id": row["user_id"],
-            "action": row["action"],
-            "document_id": row["document_id"],
-            "details": row["details"],
-            "created_at": row["created_at"],
-            "previous_hash": previous_hash,
-        }
-
-        entry_hash = hashlib.sha256(
-            json.dumps(
-                entry_data,
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode("utf-8")
-        ).hexdigest()
-
-        connection.execute(
-            """
-            UPDATE audit_logs
-            SET previous_hash = ?, entry_hash = ?
-            WHERE id = ?
-            """,
-            (previous_hash, entry_hash, row["id"]),
-        )
-
-        previous_hash = entry_hash
-
-    connection.commit()
-
-except Exception:
-    connection.rollback()
-    raise
-
-finally:
-    connection.close()
-def verify_audit_logs():
+    """Rebuild audit hashes only when explicitly called."""
     connection = get_connection()
 
     try:
-        rows = connection.execute(
-            """
+        rows = connection.execute("""
+            SELECT id, user_id, action, document_id, details, created_at
+            FROM audit_logs
+            ORDER BY id ASC
+        """).fetchall()
+
+        previous_hash = "GENESIS"
+
+        for row in rows:
+            entry_data = {
+                "user_id": row["user_id"],
+                "action": row["action"],
+                "document_id": row["document_id"],
+                "details": row["details"],
+                "created_at": row["created_at"],
+                "previous_hash": previous_hash,
+            }
+
+            entry_hash = hashlib.sha256(
+                json.dumps(
+                    entry_data,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+
+            connection.execute("""
+                UPDATE audit_logs
+                SET previous_hash = ?, entry_hash = ?
+                WHERE id = ?
+            """, (previous_hash, entry_hash, row["id"]))
+
+            previous_hash = entry_hash
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def verify_audit_logs():
+    """Verify the audit log hash chain without modifying it."""
+    connection = get_connection()
+
+    try:
+        rows = connection.execute("""
             SELECT id, user_id, action, document_id, details,
                    created_at, previous_hash, entry_hash
             FROM audit_logs
             ORDER BY id ASC
-            """
-        ).fetchall()
+        """).fetchall()
 
         previous_hash = "GENESIS"
 
@@ -230,7 +241,10 @@ def verify_audit_logs():
                 return False
 
             if row["previous_hash"] != previous_hash:
-                print(f"FAILED: Previous hash mismatch at audit log ID {row['id']}")
+                print(
+                    "FAILED: Previous hash mismatch at "
+                    f"audit log ID {row['id']}"
+                )
                 return False
 
             entry_data = {

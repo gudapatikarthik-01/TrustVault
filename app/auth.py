@@ -7,6 +7,9 @@ import jwt
 from dotenv import load_dotenv
 from pwdlib import PasswordHash
 
+
+
+
 password_hasher = PasswordHash.recommended()
 
 

@@ -40,13 +40,15 @@ Trust Vault/
 │   ├── auth.py
 │   ├── test_auth.py
 │   ├── test_login.py
-│   └── test_document_security.py
-├── uploads/
-├── check_db.py
-├── requirements.txt
-├── .env
-├── .gitignore
-└── trustvault.db
+│   ├── test_document_security.py
+│   └── test_audit_tampering.py
+├── uploads/                 # Uploaded documents (local only)
+├── check_db.py              # Audit-log integrity checker
+├── requirements.txt         # Python dependencies
+├── README.md                # Project documentation
+├── PROMPTS.md               # AI prompt history
+├── THREATS.md               # Security threat model
+└── .gitignore               # Files excluded from Git
 
 6. Installation and Setup
 
